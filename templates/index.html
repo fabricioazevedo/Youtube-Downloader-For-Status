@@ -40,7 +40,7 @@
   <button onclick="downloadClip()" style="padding: 10px 16px;">⬇️ Download</button>
 
   <div id="video-container" style="display:none; margin-top:20px;">
-    <iframe id="ytplayer" width="320" height="560" frameborder="0" allowfullscreen></iframe>
+    <iframe id="ytplayer" width="560" height="315" frameborder="0" allowfullscreen></iframe>
     <p id="status-text" style="margin-top: 10px;">⏳ Waiting...</p>
   </div>
 
@@ -63,6 +63,7 @@
         alert("Please enter a valid YouTube URL.");
         return;
       }
+      // Use the original YouTube resolution for the preview
       document.getElementById('ytplayer').src = "https://www.youtube.com/embed/" + videoId;
       document.getElementById('video-container').style.display = 'block';
     }
