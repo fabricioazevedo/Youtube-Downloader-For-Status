@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Status Downloader</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+
+  <h1>🎬 YouTube Status Downloader</h1>
+
+  <p>
+    Paste a YouTube URL below. You can:
+    <ul>
+      <li><b>Download full video</b> (original resolution)</li>
+      <li><b>Download a short clip</b> (converted to 720x1280 - great for TikTok, Instagram, or WhatsApp Status)</li>
+    </ul>
+    Optional: enable captions if the video has subtitles available.
+  </p>
+
+  <label for="url">YouTube URL:</label><br>
+  <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." style="width: 100%; padding: 8px; margin: 8px 0;"><br>
+
+  <label for="mode">Download Mode:</label><br>
+  <select id="mode" style="padding: 6px;">
+    <option value="full">Full Video (original size)</option>
+    <option value="clip">Select Clip (TikTok size)</option>
+  </select><br><br>
+
+  <div id="clip-controls" style="display: none;">
+    <label>Start Time (mm:ss):</label>
+    <input type="text" id="start-time" value="0:00" style="width: 80px;">
+    <label>End Time (mm:ss):</label>
+    <input type="text" id="end-time" value="0:30" style="width: 80px;"><br><br>
+  </div>
+
+  <label><input type="checkbox" id="include-captions"> Include YouTube Captions (if available)</label><br><br>
+
+  <button onclick="previewVideo()" style="padding: 10px 16px;">📺 Preview</button>
+  <button onclick="downloadClip()" style="padding: 10px 16px;">⬇️ Download</button>
+
+  <div id="video-container" style="display:none; margin-top:20px;">
+    <iframe id="ytplayer" width="320" height="560" frameborder="0" allowfullscreen></iframe>
+    <p id="status-text" style="margin-top: 10px;">⏳ Waiting...</p>
+  </div>
+
+  <script>
+    let statusInterval;
+
+    function getYoutubeVideoId(url) {
+      const match = url.match(/[?&]v=([^&]+)/);
+      return match ? match[1] : null;
+    }
+
+    function previewVideo() {
+      const url = document.getElementById('url').value;
+      const videoId = getYoutubeVideoId(url);
+      if (!videoId) {
+        alert("Please enter a valid YouTube URL.");
+        return;
+      }
+      document.getElementById('ytplayer').src = "https://www.youtube.com/embed/" + videoId;
+      document.getElementById('video-container').style.display = 'block';
+    }
+
+    async function pollStatus() {
+      const res = await fetch('/status');
+      const data = await res.json();
+      document.getElementById('status-text').innerText = data.status;
+    }
+
+    async function downloadClip() {
+      const url = document.getElementById('url').value;
+      const mode = document.getElementById('mode').value;
+      const startTime = document.getElementById('start-time').value;
+      const endTime = document.getElementById('end-time').value;
+      const includeCaptions = document.getElementById('include-captions').checked;
+
+      // Show status area in all cases
+      document.getElementById('video-container').style.display = 'block';
+      document.getElementById('status-text').innerText = "🚀 Starting...";
+      if (statusInterval) clearInterval(statusInterval);
+      statusInterval = setInterval(pollStatus, 1000);
+
+      const response = await fetch('/download', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          url,
+          mode,
+          start_time: startTime,
+          end_time: endTime,
+          include_captions: includeCaptions
+        })
+      });
+
+      clearInterval(statusInterval);
+      document.getElementById('status-text').innerText = "✅ Done! Downloading file...";
+
+      const blob = await response.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = "video_part.mp4";
+      a.click();
+
+      document.getElementById('status-text').innerText = "✅ Download complete!";
+    }
+
+    // Toggle clip time input when selecting mode
+    document.getElementById('mode').addEventListener('change', function() {
+      const showClip = this.value === 'clip';
+      document.getElementById('clip-controls').style.display = showClip ? 'block' : 'none';
+    });
+  </script>
+</body>
+</html>
