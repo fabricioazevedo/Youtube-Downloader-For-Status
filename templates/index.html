@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>YouTube Status Downloader</title>
 </head>
-<body style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+<body style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto;"> 
 
   <h1>🎬 YouTube Status Downloader</h1>
 
@@ -42,6 +42,10 @@
   <div id="video-container" style="display:none; margin-top:20px;">
     <iframe id="ytplayer" width="320" height="560" frameborder="0" allowfullscreen></iframe>
     <p id="status-text" style="margin-top: 10px;">⏳ Waiting...</p>
+  </div>
+
+  <div id="error-message" style="color: red; margin-top: 20px; display: none;">
+    <p><strong>Error:</strong> <span id="error-text"></span></p>
   </div>
 
   <script>
@@ -82,35 +86,39 @@
       if (statusInterval) clearInterval(statusInterval);
       statusInterval = setInterval(pollStatus, 1000);
 
-      const response = await fetch('/download', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          url,
-          mode,
-          start_time: startTime,
-          end_time: endTime,
-          include_captions: includeCaptions
-        })
-      });
-
-      clearInterval(statusInterval);
-      document.getElementById('status-text').innerText = "✅ Done! Downloading file...";
-
-      const blob = await response.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = "video_part.mp4";
-      a.click();
-
-      document.getElementById('status-text').innerText = "✅ Download complete!";
+      try {
+        const response = await fetch('/download', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            url,
+            mode,
+            start_time: startTime,
+            end_time: endTime,
+            include_captions: includeCaptions
+          })
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = 'downloaded_video.mp4';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          const data = await response.json();
+          document.getElementById('error-text').innerText = data.status;
+          document.getElementById('error-message').style.display = 'block';
+        }
+      } catch (error) {
+        document.getElementById('error-text').innerText = "Network or server error.";
+        document.getElementById('error-message').style.display = 'block';
+      }
     }
-
-    // Toggle clip time input when selecting mode
-    document.getElementById('mode').addEventListener('change', function() {
-      const showClip = this.value === 'clip';
-      document.getElementById('clip-controls').style.display = showClip ? 'block' : 'none';
-    });
   </script>
+
 </body>
 </html>
